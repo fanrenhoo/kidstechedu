@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { IVideoProvider, VideoPlayToken, VideoMeta } from '../interfaces/video-provider.interface';
-import { VideoSource } from '../../../prisma/client';
+import { VideoSource } from '@prisma/client';
 
 @Injectable()
 export class BilibiliProvider implements IVideoProvider {

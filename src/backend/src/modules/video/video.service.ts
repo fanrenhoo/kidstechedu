@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { IVideoProvider, VideoPlayToken, VideoMeta } from './interfaces/video-provider.interface';
 import { BilibiliProvider } from './providers/bilibili.provider';
-import { VideoSource } from '../../prisma/client';
+import { VideoSource } from '@prisma/client';
 
 @Injectable()
 export class VideoService {

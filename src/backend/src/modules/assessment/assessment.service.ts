@@ -27,7 +27,7 @@ export class AssessmentService {
 
     return {
       attemptId: `${assessmentId}-${childId}-${attempts + 1}`,
-      questions: assessment.questions,
+      questions: assessment.questionsData as any[],
       timeLimit: assessment.timeLimit,
       totalScore: assessment.totalScore,
     };
@@ -45,7 +45,7 @@ export class AssessmentService {
     }
 
     // 计算分数（简单实现）
-    const questions = assessment.questions as any[];
+    const questions = assessment.questionsData as any[];
     let correctCount = 0;
     const wrongQuestions: any[] = [];
 
@@ -161,8 +161,8 @@ export class AssessmentService {
 
     return {
       result,
-      badge: passed ? await this.getAssessmentBadge(assessmentId) : null,
-      recommendations: passed
+      badge: data.passed ? await this.getAssessmentBadge(assessmentId) : null,
+      recommendations: data.passed
         ? ['继续学习下一课程']
         : ['回顾本章内容', '重新观看视频'],
     };

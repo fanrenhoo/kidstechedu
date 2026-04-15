@@ -28,33 +28,33 @@ export class PrismaService
   async cleanDatabase() {
     if (process.env.NODE_ENV === 'test') {
       // 按依赖顺序删除
-      await this.learningEvents.deleteMany();
+      await this.learningEvent.deleteMany();
       await this.chapterProgress.deleteMany();
-      await this.learningRecords.deleteMany();
-      await this.assessmentResults.deleteMany();
-      await this.enrollments.deleteMany();
-      await this.courseChapters.deleteMany();
-      await this.courses.deleteMany();
+      await this.learningRecord.deleteMany();
+      await this.assessmentResult.deleteMany();
+      await this.enrollment.deleteMany();
+      await this.courseChapter.deleteMany();
+      await this.course.deleteMany();
       await this.abilityHistory.deleteMany();
-      await this.abilityProfiles.deleteMany();
-      await this.planCourses.deleteMany();
-      await this.learningPlans.deleteMany();
-      await this.notes.deleteMany();
-      await this.blogs.deleteMany();
-      await this.groupMessages.deleteMany();
-      await this.groupMembers.deleteMany();
-      await this.groups.deleteMany();
-      await this.comments.deleteMany();
-      await this.guardianSettings.deleteMany();
-      await this.childParentRelations.deleteMany();
-      await this.children.deleteMany();
-      await this.parents.deleteMany();
-      await this.userCredentials.deleteMany();
-      await this.userSessions.deleteMany();
-      await this.userBadges.deleteMany();
-      await this.userLevels.deleteMany();
+      await this.abilityProfile.deleteMany();
+      await this.planCourse.deleteMany();
+      await this.learningPlan.deleteMany();
+      await this.note.deleteMany();
+      await this.blog.deleteMany();
+      await this.groupMessage.deleteMany();
+      await this.groupMember.deleteMany();
+      await this.group.deleteMany();
+      await this.comment.deleteMany();
+      await this.guardianSetting.deleteMany();
+      await this.childParentRelation.deleteMany();
+      await this.child.deleteMany();
+      await this.parent.deleteMany();
+      await this.userCredential.deleteMany();
+      await this.userSession.deleteMany();
+      await this.userBadge.deleteMany();
+      await this.userLevel.deleteMany();
       await this.pointsLog.deleteMany();
-      await this.users.deleteMany();
+      await this.user.deleteMany();
     }
   }
 }

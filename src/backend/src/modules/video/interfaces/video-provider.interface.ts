@@ -1,4 +1,4 @@
-import { VideoSource } from '../../../prisma/client';
+import { VideoSource } from '@prisma/client';
 
 // 视频播放凭证
 export interface VideoPlayToken {

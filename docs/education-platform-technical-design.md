@@ -725,73 +725,68 @@ CREATE TABLE behavior_alerts (
 );
 ```
 
-### 4.2 MongoDB 集合设计
+### 4.2 学习行为日志设计（MVP方案 - PG替代MongoDB）
+
+**MVP阶段使用PostgreSQL JSONB存储学习行为日志**
+
+```sql
+-- 学习行为日志表
+CREATE TABLE learning_events (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    child_id UUID NOT NULL REFERENCES children(user_id),
+    session_id UUID,
+    event_type VARCHAR(50) NOT NULL, -- 'video_play', 'video_pause', 'quiz_answer', etc.
+    course_id UUID REFERENCES courses(id),
+    chapter_id UUID REFERENCES course_chapters(id),
+    video_timestamp INTEGER, -- 秒
+    event_data JSONB DEFAULT '{}',
+    device_info JSONB DEFAULT '{}',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 创建索引
+CREATE INDEX idx_learning_events_child ON learning_events(child_id, created_at DESC);
+CREATE INDEX idx_learning_events_course ON learning_events(course_id, created_at DESC);
+CREATE INDEX idx_learning_events_type ON learning_events(event_type);
+
+-- AI对话历史表
+CREATE TABLE ai_conversations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    child_id UUID NOT NULL REFERENCES children(user_id),
+    conversation_id UUID NOT NULL,
+    messages JSONB DEFAULT '[]',
+    context JSONB DEFAULT '{}',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_ai_conversations_child ON ai_conversations(child_id, created_at DESC);
+```
+
+**未来升级MongoDB方案（用户量>10万时启用）**
 
 ```javascript
-// 学习行为日志（高频率写入）
+// 学习行为日志（迁移到MongoDB以应对高频写入）
 db.learning_events.insertOne({
     _id: ObjectId(),
     childId: UUID("..."),
     sessionId: UUID("..."),
-    eventType: "video_play", // video_play, video_pause, quiz_answer, interaction, etc.
+    eventType: "video_play",
     courseId: UUID("..."),
     chapterId: UUID("..."),
-    videoTimestamp: 120, // 秒
-    eventData: {
-        // 事件特定数据
-    },
-    deviceInfo: {
-        type: "mobile",
-        os: "iOS",
-        version: "17.0"
-    },
+    videoTimestamp: 120,
+    eventData: {...},
+    deviceInfo: {...},
     createdAt: ISODate("...")
 });
 
-// 创建索引
-db.learning_events.createIndex({ childId: 1, createdAt: -1 });
-db.learning_events.createIndex({ courseId: 1, createdAt: -1 });
-
-// 用户会话详细日志
-db.session_logs.insertOne({
-    _id: ObjectId(),
-    userId: UUID("..."),
-    sessionId: UUID("..."),
-    startTime: ISODate("..."),
-    endTime: ISODate("..."),
-    duration: 1800, // 秒
-    activities: [
-        {
-            action: "view_course",
-            targetId: UUID("..."),
-            timestamp: ISODate("...")
-        }
-    ],
-    deviceInfo: {...},
-    geoInfo: {...}
-});
-
-// AI对话历史
+// AI对话历史（迁移到MongoDB）
 db.ai_conversations.insertOne({
     _id: ObjectId(),
     childId: UUID("..."),
     conversationId: UUID("..."),
-    messages: [
-        {
-            role: "user",
-            content: "什么是人工智能？",
-            timestamp: ISODate("...")
-        },
-        {
-            role: "assistant",
-            content: "人工智能就像一个非常聪明的机器人朋友...",
-            timestamp: ISODate("...")
-        }
-    ],
-    context: {
-        courseId: UUID("..."),
-        chapterId: UUID("...")
-    },
+    messages: [{role: "user", content: "...", timestamp: ISODate("...")}],
+    context: {courseId: UUID("..."), chapterId: UUID("...")},
     createdAt: ISODate("...")
 });
 ```
