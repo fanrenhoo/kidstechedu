@@ -1,0 +1,722 @@
+// Prisma Schema for FutureStar Academy (未来星学堂)
+// MVP Version - PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== 用户域 ====================
+
+// 用户基表
+model User {
+  id        String    @id @default(uuid())
+  userType  String    @map("user_type") // 'child', 'parent', 'teacher', 'admin'
+  status    String    @default("active") // 'active', 'inactive', 'suspended'
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  // 关系
+  child     Child?
+  parent    Parent?
+  teacher   Teacher?
+  credentials UserCredential[]
+  sessions  UserSession[]
+  badges    UserBadge[]
+  pointsLog PointsLog[]
+  userLevel UserLevel?
+
+  @@map("users")
+}
+
+// 儿童用户
+model Child {
+  userId      String    @id @map("user_id")
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  nickname    String
+  birthDate   DateTime  @map("birth_date")
+  gender      String?
+  avatarId    String?   @map("avatar_id")
+  ageGroup    String    @map("age_group") // '4-6', '7-9', '10-12'
+  totalPoints Int       @default(0) @map("total_points")
+  preferences Json?     @default("{}")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  // 关系
+  parentRelations ChildParentRelation[]
+  enrollments     Enrollment[]
+  learningRecords LearningRecord[]
+  chapterProgress ChapterProgress[]
+  learningPlans   LearningPlan[]
+  abilities       AbilityProfile[]
+  abilityHistory  AbilityHistory[]
+  notes           Note[]
+  blogs           Blog[]
+  groupMembers    GroupMember[]
+  assessmentResults AssessmentResult[]
+  guardianSettings GuardianSetting[]
+  learningEvents  LearningEvent[]
+  aiConversations AiConversation[]
+
+  @@map("children")
+}
+
+// 家长用户
+model Parent {
+  userId            String    @id @map("user_id")
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phone             String?   @unique
+  email             String?   @unique
+  name              String?
+  avatarUrl         String?   @map("avatar_url")
+  verificationStatus String   @default("pending") @map("verification_status")
+  createdAt         DateTime  @default(now()) @map("created_at")
+
+  // 关系
+  childRelations    ChildParentRelation[]
+  guardianSettings  GuardianSetting[]
+  learningReports   LearningReport[]
+
+  @@map("parents")
+}
+
+// 教师
+model Teacher {
+  userId      String    @id @map("user_id")
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  bio         String?
+  avatarUrl   String?   @map("avatar_url")
+  specialties String[]
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  // 关系
+  courses     Course[]
+
+  @@map("teachers")
+}
+
+// 用户认证凭证
+model UserCredential {
+  id              String   @id @default(uuid())
+  userId          String   @map("user_id")
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  credentialType  String   @map("credential_type") // 'password', 'pattern', 'voice', 'oauth'
+  credentialHash  String?  @map("credential_hash")
+  salt            String?
+  isPrimary       Boolean  @default(false) @map("is_primary")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@map("user_credentials")
+}
+
+// 用户会话
+model UserSession {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceType String?  @map("device_type")
+  deviceId   String?  @map("device_id")
+  ipAddress  String?  @map("ip_address")
+  userAgent  String?  @map("user_agent")
+  expiresAt  DateTime @map("expires_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("user_sessions")
+}
+
+// 儿童家长关联
+model ChildParentRelation {
+  id           String   @id @default(uuid())
+  childId      String   @map("child_id")
+  child        Child    @relation(fields: [childId], references: [userId], onDelete: Cascade)
+  parentId     String   @map("parent_id")
+  parent       Parent   @relation(fields: [parentId], references: [userId], onDelete: Cascade)
+  relationType String   @default("parent") @map("relation_type")
+  permissions  Json     @default("{}")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@unique([childId, parentId])
+  @@map("child_parent_relations")
+}
+
+// ==================== 课程域 ====================
+
+// 课程分类
+model CourseCategory {
+  id         String   @id @default(uuid())
+  name       String
+  parentId   String?  @map("parent_id")
+  parent     CourseCategory?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children   CourseCategory[] @relation("CategoryTree")
+  iconUrl    String?  @map("icon_url")
+  sortOrder  Int      @default(0) @map("sort_order")
+  status     String   @default("active")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  // 关系
+  courses    Course[]
+
+  @@map("course_categories")
+}
+
+// 课程
+model Course {
+  id              String   @id @default(uuid())
+  title           String
+  description     String?
+  categoryId      String?  @map("category_id")
+  category        CourseCategory? @relation(fields: [categoryId], references: [id])
+  teacherId       String?  @map("teacher_id")
+  teacher         Teacher? @relation(fields: [teacherId], references: [userId])
+  coverImageUrl   String?  @map("cover_image_url")
+  ageRange        String   @map("age_range") // '4-6', '7-9', '10-12', 'all'
+  difficultyLevel Int      @default(1) @map("difficulty_level")
+  totalDuration   Int?     @map("total_duration") // 秒
+  totalChapters   Int      @default(0) @map("total_chapters")
+  pricingType     String   @default("free") @map("pricing_type") // 'free', 'paid', 'subscription'
+  price           Float?
+  tags            String[]
+  status          String   @default("draft") // 'draft', 'published', 'archived'
+  viewCount       Int      @default(0) @map("view_count")
+  enrollmentCount Int      @default(0) @map("enrollment_count")
+  averageRating   Float    @default(0) @map("average_rating")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // 关系
+  chapters        CourseChapter[]
+  enrollments     Enrollment[]
+  assessments     Assessment[]
+  comments        Comment[]
+
+  @@map("courses")
+}
+
+// 课程章节
+model CourseChapter {
+  id            String   @id @default(uuid())
+  courseId      String   @map("course_id")
+  course        Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  sequence      Int
+  title         String
+  description   String?
+  videoId       String?  @map("video_id")
+  video         Video?   @relation(fields: [videoId], references: [id])
+  duration      Int?     // 秒
+  interactionData Json?  @map("interaction_data")
+  hasAssessment Boolean  @default(false) @map("has_assessment")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  // 关系
+  progress      ChapterProgress[]
+  learningRecords LearningRecord[]
+
+  @@map("course_chapters")
+}
+
+// 视频来源枚举
+enum VideoSource {
+  BILIBILI      // 哔哩哔哩
+  DOUYIN        // 抖音
+  WECHAT_VIDEO  // 微信视频号
+  XIAOHONGSHU   // 小红书
+  SELF_UPLOAD   // 自建上传（未来扩展）
+}
+
+// 视频资源
+model Video {
+  id            String     @id @default(uuid())
+  title         String?
+  source        VideoSource @default(SELF_UPLOAD) @map("video_source")
+  externalId    String?    @map("external_id")    // 第三方平台视频ID
+  externalUrl   String?    @map("external_url")   // 第三方平台播放页URL
+  embedCode     String?    @map("embed_code")     // 第三方embed代码
+  originalUrl   String?    @map("original_url")  // 自建上传原始URL
+  transcodedUrls Json?     @map("transcoded_urls") // 自建：不同清晰度
+  thumbnailUrl  String?    @map("thumbnail_url")
+  subtitleUrls  Json?     @map("subtitle_urls")
+  duration      Int?       // 秒
+  fileSize      BigInt?    @map("file_size")
+  status        String     @default("processing")
+  createdAt     DateTime   @default(now()) @map("created_at")
+
+  // 关系
+  chapters      CourseChapter[]
+
+  @@map("videos")
+}
+
+// 课程报名
+model Enrollment {
+  id               String    @id @default(uuid())
+  courseId         String    @map("course_id")
+  course           Course    @relation(fields: [courseId], references: [id])
+  childId          String    @map("child_id")
+  child            Child     @relation(fields: [childId], references: [userId])
+  enrolledAt       DateTime  @default(now()) @map("enrolled_at")
+  completedAt      DateTime? @map("completed_at")
+  progressPercentage Float   @default(0) @map("progress_percentage")
+  lastAccessedAt   DateTime? @map("last_accessed_at")
+
+  @@unique([courseId, childId])
+  @@map("course_enrollments")
+}
+
+// ==================== 学习域 ====================
+
+// 学习记录
+model LearningRecord {
+  id              String    @id @default(uuid())
+  childId         String    @map("child_id")
+  child           Child     @relation(fields: [childId], references: [userId])
+  courseId        String    @map("course_id")
+  course          Course    @relation(fields: [courseId], references: [id])
+  chapterId       String?   @map("chapter_id")
+  chapter         CourseChapter? @relation(fields: [chapterId], references: [id])
+  sessionId       String?   @map("session_id")
+  actionType      String    @map("action_type") // 'video_play', 'video_pause', 'quiz_answer', etc.
+  actionData      Json?     @map("action_data")
+  durationSeconds Int?      @map("duration_seconds")
+  watchedSeconds  Int?      @default(0) @map("watched_seconds") // Sprint 3: 累计观看秒数
+  progress        Float?    @default(0) @map("progress") // Sprint 3: 进度百分比 0.0-1.0
+  completedAt     DateTime? @map("completed_at") // Sprint 3: 完成时间
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  @@unique([childId, chapterId]) // Sprint 3: 确保每个孩子每章节只有一条进度记录
+  @@index([childId, courseId])
+  @@index([childId, chapterId])
+  @@map("learning_records")
+}
+
+// 章节进度
+model ChapterProgress {
+  id               String    @id @default(uuid())
+  childId          String    @map("child_id")
+  child            Child     @relation(fields: [childId], references: [userId])
+  chapterId        String    @map("chapter_id")
+  chapter          CourseChapter @relation(fields: [chapterId], references: [id])
+  videoProgress    Int       @default(0) @map("video_progress") // 百分比
+  interactionCompleted Json?  @map("interaction_completed")
+  isCompleted      Boolean   @default(false) @map("is_completed")
+  completedAt      DateTime? @map("completed_at")
+  lastAccessedAt   DateTime? @map("last_accessed_at")
+
+  @@unique([childId, chapterId])
+  @@map("chapter_progress")
+}
+
+// 课程进度跟踪表（聚合各课程的总体进度）
+model CourseProgress {
+  id                String    @id @default(uuid())
+  childId           String    @map("child_id")
+  child             Child     @relation(fields: [childId], references: [id])
+  courseId          String    @map("course_id")
+  course            Course    @relation(fields: [courseId], references: [id])
+  progressPercentage Float     @default(0.0)  @map("progress_percentage") // 0.0-100.0
+  lastChapterId     String?   @map("last_chapter_id") // 最后学习的章节
+  lastAccessAt      DateTime  @default(now()) @map("last_access_at")
+  completedAt       DateTime? @map("completed_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  @@unique([childId, courseId])
+  @@map("course_progress")
+}
+
+// 学习计划
+model LearningPlan {
+  id          String   @id @default(uuid())
+  childId     String   @map("child_id")
+  child       Child    @relation(fields: [childId], references: [userId])
+  name        String?
+  goals       Json     @default("[]")
+  startDate   DateTime @map("start_date")
+  endDate     DateTime? @map("end_date")
+  milestones  Json     @default("[]")
+  status      String   @default("active")
+  createdBy   String?  @map("created_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // 关系
+  planCourses PlanCourse[]
+
+  @@map("learning_plans")
+}
+
+// 计划课程安排
+model PlanCourse {
+  id            String    @id @default(uuid())
+  planId        String    @map("plan_id")
+  plan          LearningPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  courseId      String    @map("course_id")
+  sequence      Int?
+  scheduledDate DateTime? @map("scheduled_date")
+  scheduledTime String?   @map("scheduled_time")
+  status        String    @default("pending")
+  completedAt   DateTime? @map("completed_at")
+
+  @@map("plan_courses")
+}
+
+// 能力画像
+model AbilityProfile {
+  id        String   @id @default(uuid())
+  childId   String   @map("child_id")
+  child     Child    @relation(fields: [childId], references: [userId])
+  domain    String   // 'ai', 'english', 'history', 'logic', 'science'
+  score     Float    @default(0)
+  level     Int      @default(1)
+  details   Json?    @default("{}")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([childId, domain])
+  @@map("ability_profiles")
+}
+
+// 能力历史
+model AbilityHistory {
+  id        String   @id @default(uuid())
+  childId   String   @map("child_id")
+  child     Child    @relation(fields: [childId], references: [userId])
+  domain    String
+  score     Float?
+  level     Int?
+  source    String?  // 'assessment', 'learning', 'interaction'
+  recordedAt DateTime @default(now()) @map("recorded_at")
+
+  @@map("ability_history")
+}
+
+// ==================== 社交域 ====================
+
+// 评论
+model Comment {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  user        User     @relation(fields: [userId], references: [id])
+  targetType  String   @map("target_type") // 'course', 'chapter', 'blog', 'note'
+  targetId    String   @map("target_id")
+  courseId    String?  @map("course_id")
+  course      Course?  @relation(fields: [courseId], references: [id])
+  parentId    String?  @map("parent_id")
+  parent      Comment? @relation("CommentTree", fields: [parentId], references: [id])
+  children    Comment[] @relation("CommentTree")
+  content     String
+  status      String   @default("pending") // 'pending', 'approved', 'rejected', 'deleted'
+  likeCount   Int      @default(0) @map("like_count")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("comments")
+}
+
+// 笔记
+model Note {
+  id             String   @id @default(uuid())
+  childId        String   @map("child_id")
+  child          Child    @relation(fields: [childId], references: [userId])
+  noteType       String   @default("learning") @map("note_type") // 'learning', 'mood', 'milestone'
+  title          String?
+  content        String
+  images         Json     @default("[]")
+  relatedCourseId String? @map("related_course_id")
+  videoTimestamp Int?     @map("video_timestamp") // 秒
+  isPublic       Boolean  @default(false) @map("is_public")
+  likeCount      Int      @default(0) @map("like_count")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@map("notes")
+}
+
+// 博客
+model Blog {
+  id           String    @id @default(uuid())
+  childId      String    @map("child_id")
+  child        Child     @relation(fields: [childId], references: [userId])
+  title        String
+  content      String
+  coverImageUrl String?  @map("cover_image_url")
+  images       Json      @default("[]")
+  tags         String[]
+  status       String    @default("draft") // 'draft', 'pending_review', 'published', 'archived'
+  viewCount    Int       @default(0) @map("view_count")
+  likeCount    Int       @default(0) @map("like_count")
+  commentCount Int       @default(0) @map("comment_count")
+  publishedAt  DateTime? @map("published_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@map("blogs")
+}
+
+// 学习群组
+model Group {
+  id             String   @id @default(uuid())
+  name           String
+  groupType      String   @map("group_type") // 'course', 'interest', 'class', 'partner'
+  description    String?
+  coverImageUrl  String?  @map("cover_image_url")
+  creatorId      String   @map("creator_id")
+  relatedCourseId String? @map("related_course_id")
+  memberCount    Int      @default(0) @map("member_count")
+  maxMembers     Int?     @map("max_members")
+  isPublic       Boolean  @default(false) @map("is_public")
+  status         String   @default("active")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  // 关系
+  members        GroupMember[]
+  messages       GroupMessage[]
+
+  @@map("groups")
+}
+
+// 群组成员
+model GroupMember {
+  id       String   @id @default(uuid())
+  groupId  String   @map("group_id")
+  group    Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  userId   String   @map("user_id")
+  user     User     @relation(fields: [userId], references: [id])
+  role     String   @default("member") // 'member', 'admin', 'creator'
+  joinedAt DateTime @default(now()) @map("joined_at")
+
+  @@unique([groupId, userId])
+  @@map("group_members")
+}
+
+// 群消息
+model GroupMessage {
+  id          String   @id @default(uuid())
+  groupId     String   @map("group_id")
+  group       Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  senderId    String   @map("sender_id")
+  content     String
+  messageType String   @default("text") @map("message_type") // 'text', 'image', 'system'
+  metadata    Json?    @default("{}")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("group_messages")
+}
+
+// ==================== 考核域 ====================
+
+// 考核定义
+model Assessment {
+  id            String   @id @default(uuid())
+  chapterId     String?  @map("chapter_id") @unique // 一对一：每个章节最多一个测验
+  chapter       CourseChapter? @relation(fields: [chapterId], references: [id])
+  courseId      String?  @map("course_id")
+  course        Course?  @relation(fields: [courseId], references: [id])
+  title         String
+  assessmentType String  @map("assessment_type") // 'chapter', 'course', 'periodic', 'upgrade', 'special'
+  questionsData Json    @map("questions_data") // 题目数据（JSON数组）
+  totalScore    Int      @default(100) @map("total_score")
+  passingScore  Int      @default(60) @map("passing_score")
+  timeLimit     Int?     @map("time_limit") // 秒
+  attemptLimit  Int      @default(3) @map("attempt_limit")
+  status        String   @default("active")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // 关系
+  results       AssessmentResult[]
+
+  @@map("assessments")
+}
+
+// 考核结果
+model AssessmentResult {
+  id             String   @id @default(uuid())
+  assessmentId   String   @map("assessment_id")
+  assessment     Assessment @relation(fields: [assessmentId], references: [id])
+  childId        String   @map("child_id")
+  child          Child    @relation(fields: [childId], references: [userId])
+  score          Int?
+  passed         Boolean  @default(false)
+  answers        Json     @default("{}")
+  timeSpent      Int?     @map("time_spent")
+  attemptNumber  Int      @default(1) @map("attempt_number")
+  completedAt    DateTime @default(now()) @map("completed_at")
+
+  @@map("assessment_results")
+}
+
+// 勋章定义
+model Badge {
+  id            String   @id @default(uuid())
+  name          String
+  description   String?
+  imageUrl      String   @map("image_url")
+  category      String?
+  conditionType String   @map("condition_type")
+  conditionData Json     @default("{}")
+  points        Int      @default(0)
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  // 关系
+  userBadges    UserBadge[]
+
+  @@map("badges")
+}
+
+// 用户勋章
+model UserBadge {
+  id       String   @id @default(uuid())
+  badgeId  String   @map("badge_id")
+  badge    Badge    @relation(fields: [badgeId], references: [id])
+  userId   String   @map("user_id")
+  user     User     @relation(fields: [userId], references: [id])
+  earnedAt DateTime @default(now()) @map("earned_at")
+
+  @@unique([badgeId, userId])
+  @@map("user_badges")
+}
+
+// 等级定义
+model Level {
+  id        String   @id @default(uuid())
+  name      String
+  minPoints Int      @map("min_points")
+  maxPoints Int      @map("max_points")
+  iconUrl   String?  @map("icon_url")
+  benefits  Json?    @default("{}")
+  sequence  Int?
+
+  // 关系
+  userLevels UserLevel[]
+
+  @@map("levels")
+}
+
+// 用户等级
+model UserLevel {
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id") @unique
+  user          User     @relation(fields: [userId], references: [id])
+  levelId       String   @map("level_id")
+  level         Level    @relation(fields: [levelId], references: [id])
+  currentPoints Int      @default(0) @map("current_points")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("user_levels")
+}
+
+// 积分记录
+model PointsLog {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  user        User     @relation(fields: [userId], references: [id])
+  points      Int
+  source      String?  // 'course_complete', 'assessment', 'daily_login', 'social'
+  sourceId    String?  @map("source_id")
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("points_log")
+}
+
+// ==================== 监护域 ====================
+
+// 监护设置
+model GuardianSetting {
+  id                 String   @id @default(uuid())
+  childId            String   @map("child_id")
+  child              Child    @relation(fields: [childId], references: [userId])
+  parentId           String   @map("parent_id")
+  parent             Parent   @relation(fields: [parentId], references: [userId])
+  dailyTimeLimit     Int      @default(120) @map("daily_time_limit") // 分钟
+  allowedTimeSlots   Json     @default("[]") @map("allowed_time_slots")
+  contentFilterLevel String   @default("standard") @map("content_filter_level")
+  socialPermissions  Json     @default("{}") @map("social_permissions")
+  notificationSettings Json    @default("{}") @map("notification_settings")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  @@unique([childId, parentId])
+  @@map("guardian_settings")
+}
+
+// 学习报告
+model LearningReport {
+  id           String   @id @default(uuid())
+  childId      String   @map("child_id")
+  child        Child    @relation(fields: [childId], references: [userId])
+  parentId     String   @map("parent_id")
+  parent       Parent   @relation(fields: [parentId], references: [userId])
+  reportType   String   @map("report_type") // 'daily', 'weekly', 'monthly'
+  periodStart  DateTime @map("period_start")
+  periodEnd    DateTime @map("period_end")
+  summary      String?
+  details      Json     @default("{}")
+  recommendations Json  @default("[]")
+  generatedAt  DateTime @default(now()) @map("generated_at")
+
+  @@map("learning_reports")
+}
+
+// ==================== MVP扩展：学习行为日志 ====================
+
+// 学习事件日志（替代MongoDB）
+model LearningEvent {
+  id             String   @id @default(uuid())
+  childId        String   @map("child_id")
+  child          Child    @relation(fields: [childId], references: [userId])
+  sessionId      String?  @map("session_id")
+  eventType      String   @map("event_type")
+  courseId       String?  @map("course_id")
+  chapterId      String?  @map("chapter_id")
+  videoTimestamp Int?     @map("video_timestamp")
+  eventData      Json?    @map("event_data")
+  deviceInfo     Json?    @map("device_info")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@index([childId, createdAt])
+  @@index([courseId, createdAt])
+  @@map("learning_events")
+}
+
+// AI对话历史
+model AiConversation {
+  id             String   @id @default(uuid())
+  childId        String   @map("child_id")
+  child          Child    @relation(fields: [childId], references: [userId])
+  conversationId String   @map("conversation_id")
+  messages       Json     @default("[]")
+  context        Json?    @default("{}")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([childId, createdAt])
+  @@map("ai_conversations")
+}
+
+// Sprint 4: 学习会话状态枚举
+enum SessionStatus {
+  ACTIVE   // 进行中
+  PAUSED   // 暂停
+  ENDED    // 已结束
+}
+
+// Sprint 4: 学习会话表（用于实时监控和时长统计）
+model LearningSession {
+  id           String    @id @default(uuid())
+  childId      String    @map("child_id")
+  child        Child     @relation(fields: [childId], references: [id])
+  courseId     String?   @map("course_id")
+  chapterId    String?   @map("chapter_id")
+  startTime    DateTime  @default(now()) @map("start_time")
+  endTime      DateTime? @map("end_time")
+  durationMins Int?      @default(0) @map("duration_mins") // 累计分钟数
+  status       SessionStatus @default(ACTIVE)
+
+  @@index([childId, startTime])
+  @@map("learning_sessions")
+}
