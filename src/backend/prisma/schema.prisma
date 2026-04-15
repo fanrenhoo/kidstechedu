@@ -67,6 +67,7 @@ model Child {
   CourseProgress    CourseProgress[]
   LearningReport    LearningReport[]
   LearningSession   LearningSession[]
+  behaviorAlerts   BehaviorAlert[]
 
   @@map("children")
 }
@@ -202,6 +203,7 @@ model Course {
   comments       Comment[]
   LearningRecord LearningRecord[]
   CourseProgress CourseProgress[]
+  planCourses    PlanCourse[]
 
   @@map("courses")
 }
@@ -365,6 +367,7 @@ model PlanCourse {
   planId        String       @map("plan_id")
   plan          LearningPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
   courseId      String       @map("course_id")
+  course        Course       @relation(fields: [courseId], references: [id])
   sequence      Int?
   scheduledDate DateTime?    @map("scheduled_date")
   scheduledTime String?      @map("scheduled_time")
@@ -648,11 +651,25 @@ model GuardianSetting {
   contentFilterLevel   String   @default("standard") @map("content_filter_level")
   socialPermissions    Json     @default("{}") @map("social_permissions")
   notificationSettings Json     @default("{}") @map("notification_settings")
+  isActive             Boolean  @default(true) @map("is_active")
   createdAt            DateTime @default(now()) @map("created_at")
   updatedAt            DateTime @updatedAt @map("updated_at")
 
   @@unique([childId, parentId])
   @@map("guardian_settings")
+}
+
+// 行为预警
+model BehaviorAlert {
+  id        String   @id @default(uuid())
+  childId   String   @map("child_id")
+  child     Child    @relation(fields: [childId], references: [userId])
+  alertType String   @map("alert_type") // 'time_exceeded', 'content_blocked', 'behavior_concern'
+  severity  String   @default("medium") // 'low', 'medium', 'high'
+  details   Json    @default("{}")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("behavior_alerts")
 }
 
 // 学习报告

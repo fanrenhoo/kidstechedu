@@ -35,7 +35,7 @@ export class LearningService {
       },
       update: {
         videoProgress: videoProgress !== undefined ? videoProgress : existing?.videoProgress,
-        interactionCompleted: interactionsCompleted || existing?.interactionCompleted,
+        interactionCompleted: interactionsCompleted ?? (existing?.interactionCompleted ?? undefined),
         lastAccessedAt: new Date(),
         ...(videoProgress === 100 ? { isCompleted: true, completedAt: new Date() } : {}),
       },
@@ -60,35 +60,51 @@ export class LearningService {
 
   // ==================== 完成章节 ====================
 
-  async completeChapter(childId: string, courseId: string, chapterId: string) {
-    // 更新章节为完成状态
-    await this.prisma.chapterProgress.update({
+  async completeChapter(childId: string, chapterId: string): Promise<any> {
+    const chapter = await this.prisma.courseChapter.findUnique({
+      where: { id: chapterId },
+      include: { course: true },
+    });
+
+    if (!chapter) {
+      throw new NotFoundException('章节不存在');
+    }
+
+    // 更新 ChapterProgress
+    await this.prisma.chapterProgress.upsert({
       where: { childId_chapterId: { childId, chapterId } },
-      data: {
+      create: {
+        childId,
+        chapterId,
         videoProgress: 100,
         isCompleted: true,
         completedAt: new Date(),
+        lastAccessedAt: new Date(),
+      },
+      update: {
+        videoProgress: 100,
+        isCompleted: true,
+        completedAt: new Date(),
+        lastAccessedAt: new Date(),
       },
     });
 
-    // 更新课程进度
-    const progress = await this.updateCourseProgress(childId, courseId);
+    // 更新 CourseProgress
+    const progressPercentage = await this.updateCourseProgressInternal(childId, chapter.courseId, chapterId);
 
-    // 给予积分奖励
-    const points = 10;
-    await this.addPoints(childId, points, 'chapter_complete', chapterId);
+    // 解锁下一章节
+    await this.unlockNextChapter(childId, chapter.courseId, chapter.sequence);
 
-    // 记录学习行为
+    // 记录学习事件
     await this.logLearningEvent(childId, {
       eventType: 'chapter_complete',
-      courseId,
+      courseId: chapter.courseId,
       chapterId,
     });
 
     return {
       completed: true,
-      courseProgress: progress,
-      pointsEarned: points,
+      courseProgress: progressPercentage,
     };
   }
 
@@ -340,13 +356,14 @@ export class LearningService {
         childId,
         courseId,
         chapterId,
-        duration: durationSeconds || 0,
+        actionType: 'video_play',
+        durationSeconds: durationSeconds || 0,
         watchedSeconds: maxWatchedSeconds,
         progress,
         completedAt: isCompleted ? new Date() : null,
       },
       update: {
-        duration: durationSeconds || 0,
+        durationSeconds: durationSeconds || 0,
         watchedSeconds: maxWatchedSeconds,
         progress,
         completedAt: isCompleted ? new Date() : null,
@@ -389,55 +406,6 @@ export class LearningService {
   }
 
   /**
-   * 标记章节完成（主动触发）
-   */
-  async completeChapter(childId: string, chapterId: string): Promise<any> {
-    const chapter = await this.prisma.courseChapter.findUnique({
-      where: { id: chapterId },
-      include: { course: true },
-    });
-
-    if (!chapter) {
-      throw new NotFoundException('章节不存在');
-    }
-
-    // 更新 ChapterProgress
-    await this.prisma.chapterProgress.upsert({
-      where: { childId_chapterId: { childId, chapterId } },
-      create: {
-        childId,
-        chapterId,
-        videoProgress: 100,
-        isCompleted: true,
-        completedAt: new Date(),
-        lastAccessedAt: new Date(),
-      },
-      update: {
-        videoProgress: 100,
-        isCompleted: true,
-        completedAt: new Date(),
-        lastAccessedAt: new Date(),
-      },
-    });
-
-    // 更新 CourseProgress
-    const progressPercentage = await this.updateCourseProgressInternal(childId, chapter.courseId, chapterId);
-
-    // 解锁下一章节
-    await this.unlockNextChapter(childId, chapter.courseId, chapter.sequence);
-
-    // 记录学习事件
-    await this.logLearningEvent(childId, {
-      eventType: 'chapter_complete',
-      courseId: chapter.courseId,
-      chapterId,
-    });
-
-    return {
-      completed: true,
-      courseProgress: progressPercentage,
-    };
-  }
 
   /**
    * 获取课程进度（含各章节状态和是否解锁）

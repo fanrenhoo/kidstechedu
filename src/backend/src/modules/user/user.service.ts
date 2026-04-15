@@ -36,7 +36,6 @@ export class UserService {
     const child = await this.prisma.child.findUnique({
       where: { userId: childId },
       include: {
-        user: true,
         parentRelations: { include: { parent: true } },
         abilities: true,
         user: { include: { userLevel: { include: { level: true } } } },
@@ -233,7 +232,6 @@ export class UserService {
       where: { childId, status: 'active' },
       include: {
         planCourses: {
-          include: { course: true },
           orderBy: { sequence: 'asc' },
         },
       },
@@ -247,9 +245,8 @@ export class UserService {
       endDate: p.endDate,
       milestones: p.milestones,
       status: p.status,
-      courses: p.planCourses.map(pc => ({
+      courses: p.planCourses.map((pc: any) => ({
         courseId: pc.courseId,
-        title: pc.course?.title,
         sequence: pc.sequence,
         scheduledDate: pc.scheduledDate,
         status: pc.status,
@@ -322,7 +319,7 @@ export class UserService {
           totalPoints: user.child.totalPoints,
         },
         level: user.userLevel?.level?.name || 'Lv.1',
-        badges: user.badges?.map(b => b.badge?.name) || [],
+        badges: user.badges?.map((b: any) => b.badge?.name) || [],
       };
     }
 

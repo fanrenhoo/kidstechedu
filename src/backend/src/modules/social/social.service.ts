@@ -252,7 +252,6 @@ export class SocialService {
 
     const messages = await this.prisma.groupMessage.findMany({
       where,
-      include: { sender: { include: { child: true, parent: true } } },
       orderBy: { createdAt: 'desc' },
       take: limit,
     });

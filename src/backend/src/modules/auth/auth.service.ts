@@ -387,7 +387,14 @@ export class AuthService {
   }
 
   private getAgeGroupConfig(ageGroup: string): object {
-    const configs = {
+    const configs: Record<string, {
+      maxContentLength: number;
+      interactionStyle: string;
+      navigationStyle: string;
+      animationLevel: string;
+      feedbackStyle: string;
+      features: string[];
+    }> = {
       '4-6': {
         maxContentLength: 200,
         interactionStyle: 'voice',

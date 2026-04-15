@@ -472,16 +472,18 @@ export class AssessmentService {
       if (chapter?.course) {
         // 更新能力画像
         const domain = this.getDomainFromCategory(chapter.course.categoryId);
-        await this.prisma.abilityProfile.update({
+        await this.prisma.abilityProfile.upsert({
           where: {
             childId_domain: { childId, domain },
           },
-          data: { score: { increment: 5 } },
           create: {
             childId,
             domain,
             score: 5,
             level: 1,
+          },
+          update: {
+            score: { increment: 5 },
           },
         });
 
