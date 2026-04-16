@@ -5,23 +5,40 @@ import { ElMessage } from 'element-plus'
 
 const authStore = useAuthStore()
 
+const userType = ref<'parent' | 'child'>('parent')
 const identifier = ref('')
 const password = ref('')
+const childId = ref('')
+const credential = ref('')
 const isLoading = ref(false)
 
 const handleLogin = async () => {
-  if (!identifier.value || !password.value) {
-    ElMessage.warning('请输入手机号/邮箱和密码')
-    return
-  }
-
-  isLoading.value = true
-  try {
-    await authStore.login(identifier.value, password.value)
-  } catch (error) {
-    ElMessage.error('登录失败，请检查手机号/邮箱和密码')
-  } finally {
-    isLoading.value = false
+  if (userType.value === 'parent') {
+    if (!identifier.value || !password.value) {
+      ElMessage.warning('请输入手机号/邮箱和密码')
+      return
+    }
+    isLoading.value = true
+    try {
+      await authStore.loginParent(identifier.value, password.value)
+    } catch (error) {
+      ElMessage.error('登录失败，请检查手机号/邮箱和密码')
+    } finally {
+      isLoading.value = false
+    }
+  } else {
+    if (!childId.value || !credential.value) {
+      ElMessage.warning('请输入儿童账号和密码')
+      return
+    }
+    isLoading.value = true
+    try {
+      await authStore.loginChild(childId.value, 'password', credential.value)
+    } catch (error) {
+      ElMessage.error('登录失败，请检查儿童账号和密码')
+    } finally {
+      isLoading.value = false
+    }
   }
 }
 </script>
@@ -35,17 +52,43 @@ const handleLogin = async () => {
         </div>
       </template>
       <el-form @submit.prevent="handleLogin">
-        <el-form-item label="手机号/邮箱">
-          <el-input v-model="identifier" placeholder="请输入手机号或邮箱" />
+        <el-form-item label="登录类型">
+          <el-radio-group v-model="userType">
+            <el-radio value="parent">家长</el-radio>
+            <el-radio value="child">儿童</el-radio>
+          </el-radio-group>
         </el-form-item>
-        <el-form-item label="密码">
-          <el-input
-            v-model="password"
-            type="password"
-            placeholder="请输入密码"
-            show-password
-          />
-        </el-form-item>
+
+        <!-- 家长登录表单 -->
+        <template v-if="userType === 'parent'">
+          <el-form-item label="手机号/邮箱">
+            <el-input v-model="identifier" placeholder="请输入手机号或邮箱" />
+          </el-form-item>
+          <el-form-item label="密码">
+            <el-input
+              v-model="password"
+              type="password"
+              placeholder="请输入密码"
+              show-password
+            />
+          </el-form-item>
+        </template>
+
+        <!-- 儿童登录表单 -->
+        <template v-else>
+          <el-form-item label="儿童账号">
+            <el-input v-model="childId" placeholder="请输入儿童账号" />
+          </el-form-item>
+          <el-form-item label="密码">
+            <el-input
+              v-model="credential"
+              type="password"
+              placeholder="请输入密码"
+              show-password
+            />
+          </el-form-item>
+        </template>
+
         <el-form-item>
           <el-button
             type="primary"

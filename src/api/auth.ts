@@ -1,7 +1,6 @@
 import api from './index'
 import type {
   AuthTokens,
-  LoginRequest,
   RegisterParentRequest,
   CreateChildRequest,
   UserType,
@@ -18,6 +17,19 @@ export interface LoginResponse {
   profile: ParentProfile | ChildProfile
 }
 
+// Parent login request
+export interface ParentLoginRequest {
+  identifier: string
+  password: string
+}
+
+// Child login request
+export interface ChildLoginRequest {
+  childId: string
+  credentialType: 'password' | 'pattern' | 'voice'
+  credential: string
+}
+
 // Create child response
 export interface CreateChildResponse {
   childId: string
@@ -26,9 +38,13 @@ export interface CreateChildResponse {
   message: string
 }
 
-// Login - backend returns LoginResponseDto directly (no wrapper)
-export const login = (data: LoginRequest) =>
-  api.post<LoginResponse>('/auth/login', data)
+// Parent login - backend: POST /auth/login/parent
+export const loginParent = (data: ParentLoginRequest) =>
+  api.post<LoginResponse>('/auth/login/parent', data)
+
+// Child login - backend: POST /auth/login/child
+export const loginChild = (data: ChildLoginRequest) =>
+  api.post<LoginResponse>('/auth/login/child', data)
 
 // Register parent - backend returns LoginResponseDto directly
 export const registerParent = (data: RegisterParentRequest) =>
