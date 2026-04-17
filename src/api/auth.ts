@@ -27,8 +27,19 @@ export interface CreateChildResponse {
 }
 
 // Login - backend returns LoginResponseDto directly (no wrapper)
-export const login = (data: LoginRequest) =>
-  api.post<LoginResponse>('/auth/login', data)
+// userType determines API path: /auth/login/parent or /auth/login/child
+// Parent uses: { identifier, password }
+// Child uses: { childId, credentialType, credential }
+export const login = (data: LoginRequest, userType: 'parent' | 'child' = 'parent') => {
+  if (userType === 'child') {
+    return api.post<LoginResponse>(`/auth/login/${userType}`, {
+      childId: data.identifier,
+      credentialType: 'password',
+      credential: data.password
+    })
+  }
+  return api.post<LoginResponse>(`/auth/login/${userType}`, data)
+}
 
 // Register parent - backend returns LoginResponseDto directly
 export const registerParent = (data: RegisterParentRequest) =>

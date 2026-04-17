@@ -30,7 +30,8 @@ export const useAuthStore = defineStore('auth', () => {
 
   // Login - backend expects { identifier: phone|email, password }
   // Backend returns data directly (no ApiResponse wrapper)
-  const login = async (identifier: string, password: string) => {
+  // userType is required: 'parent' or 'child' for backend API path
+  const login = async (identifier: string, password: string, userType: 'parent' | 'child' = 'parent') => {
     isLoading.value = true
     try {
       let userData: { userId: string; userType: UserType; profile: Record<string, any> }
@@ -41,7 +42,7 @@ export const useAuthStore = defineStore('auth', () => {
         userData = { userId: result.userId, userType: result.userType as UserType, profile: result.profile }
         tokens = { accessToken: result.accessToken, refreshToken: result.refreshToken }
       } else {
-        const response = await authApi.login({ identifier, password })
+        const response = await authApi.login({ identifier, password }, userType)
         userData = response.data
         tokens = response.data
       }

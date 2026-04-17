@@ -7,6 +7,7 @@ const authStore = useAuthStore()
 
 const identifier = ref('')
 const password = ref('')
+const userType = ref<'parent' | 'child'>('parent')
 const isLoading = ref(false)
 
 const handleLogin = async () => {
@@ -17,7 +18,7 @@ const handleLogin = async () => {
 
   isLoading.value = true
   try {
-    await authStore.login(identifier.value, password.value)
+    await authStore.login(identifier.value, password.value, userType.value)
   } catch (error) {
     ElMessage.error('登录失败，请检查手机号/邮箱和密码')
   } finally {
@@ -35,6 +36,12 @@ const handleLogin = async () => {
         </div>
       </template>
       <el-form @submit.prevent="handleLogin">
+        <el-form-item label="用户类型">
+          <el-radio-group v-model="userType">
+            <el-radio value="parent">家长</el-radio>
+            <el-radio value="child">儿童</el-radio>
+          </el-radio-group>
+        </el-form-item>
         <el-form-item label="手机号/邮箱">
           <el-input v-model="identifier" placeholder="请输入手机号或邮箱" />
         </el-form-item>

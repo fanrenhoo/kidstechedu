@@ -15,7 +15,8 @@ export const useCourseStore = defineStore('course', () => {
     isLoading.value = true
     try {
       const response = await courseApi.getCourses()
-      courses.value = response.data
+      // Backend returns { items: [...], pagination: {...} }
+      courses.value = response.data.items || response.data
     } finally {
       isLoading.value = false
     }
@@ -44,7 +45,8 @@ export const useCourseStore = defineStore('course', () => {
     isLoading.value = true
     try {
       const response = await courseApi.getMyEnrollments()
-      enrollments.value = response.data
+      // Backend returns { items: [...], pagination: {...} } or direct array
+      enrollments.value = response.data.items || response.data
     } finally {
       isLoading.value = false
     }

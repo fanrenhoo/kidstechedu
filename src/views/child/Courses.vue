@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useCourseStore } from '../../stores/course'
 
+const router = useRouter()
 const courseStore = useCourseStore()
 
 onMounted(async () => {
@@ -9,7 +11,7 @@ onMounted(async () => {
 })
 
 const goToCourse = (courseId: string) => {
-  window.location.href = `/child/course/${courseId}`
+  router.push(`/child/course/${courseId}`)
 }
 </script>
 
