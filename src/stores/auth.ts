@@ -28,10 +28,8 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  // Login - backend expects { identifier: phone|email, password }
-  // Backend returns data directly (no ApiResponse wrapper)
-  // userType is required: 'parent' or 'child' for backend API path
-  const login = async (identifier: string, password: string, userType: 'parent' | 'child' = 'parent') => {
+  // Parent login - backend expects { identifier: phone|email, password }
+  const loginParent = async (identifier: string, password: string) => {
     isLoading.value = true
     try {
       let userData: { userId: string; userType: UserType; profile: Record<string, any> }
@@ -42,7 +40,7 @@ export const useAuthStore = defineStore('auth', () => {
         userData = { userId: result.userId, userType: result.userType as UserType, profile: result.profile }
         tokens = { accessToken: result.accessToken, refreshToken: result.refreshToken }
       } else {
-        const response = await authApi.login({ identifier, password }, userType)
+        const response = await authApi.loginParent({ identifier, password })
         userData = response.data
         tokens = response.data
       }
@@ -52,13 +50,35 @@ export const useAuthStore = defineStore('auth', () => {
       localStorage.setItem('user', JSON.stringify(userData))
 
       user.value = userData
+      router.push('/parent/dashboard')
+    } finally {
+      isLoading.value = false
+    }
+  }
 
-      // Redirect based on user type
-      if (userData.userType === 'parent') {
-        router.push('/parent/dashboard')
+  // Child login - backend expects { childId, credentialType, credential }
+  const loginChild = async (childId: string, credentialType: 'password' | 'pattern' | 'voice', credential: string) => {
+    isLoading.value = true
+    try {
+      let userData: { userId: string; userType: UserType; profile: Record<string, any> }
+      let tokens: { accessToken: string; refreshToken: string }
+
+      if (useMock) {
+        const result = await mockAuth.mockLogin({ identifier: childId, password: credential })
+        userData = { userId: result.userId, userType: result.userType as UserType, profile: result.profile }
+        tokens = { accessToken: result.accessToken, refreshToken: result.refreshToken }
       } else {
-        router.push('/child/dashboard')
+        const response = await authApi.loginChild({ childId, credentialType, credential })
+        userData = response.data
+        tokens = response.data
       }
+
+      localStorage.setItem('accessToken', tokens.accessToken)
+      localStorage.setItem('refreshToken', tokens.refreshToken)
+      localStorage.setItem('user', JSON.stringify(userData))
+
+      user.value = userData
+      router.push('/child/dashboard')
     } finally {
       isLoading.value = false
     }
@@ -149,7 +169,8 @@ export const useAuthStore = defineStore('auth', () => {
     userType,
     userId,
     init,
-    login,
+    loginParent,
+    loginChild,
     registerParent,
     createChild,
     logout,
