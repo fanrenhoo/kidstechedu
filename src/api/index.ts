@@ -4,7 +4,7 @@ import { ElMessage } from 'element-plus'
 import router from '../router'
 
 // Base URL - configurable via environment
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api/v1'
 
 // Create axios instance
 const api: AxiosInstance = axios.create({
@@ -45,6 +45,19 @@ api.interceptors.request.use(
 )
 
 // Response interceptor - handle errors and token refresh
+// Flag to prevent race condition during token refresh
+let isRefreshing = false
+let refreshSubscribers: Array<(token: string) => void> = []
+
+const subscribeTokenRefresh = (callback: (token: string) => void) => {
+  refreshSubscribers.push(callback)
+}
+
+const onTokenRefreshed = (token: string) => {
+  refreshSubscribers.forEach(callback => callback(token))
+  refreshSubscribers = []
+}
+
 api.interceptors.response.use(
   (response: AxiosResponse) => {
     return response
@@ -56,31 +69,53 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true
 
-      const refreshToken = getRefreshToken()
-      if (refreshToken) {
-        try {
-          // Call refresh token endpoint
-          const response = await axios.post(`${BASE_URL}/auth/refresh`, { refreshToken })
-          const { accessToken, refreshToken: newRefreshToken } = response.data.data
+      if (!isRefreshing) {
+        isRefreshing = true
+        const refreshToken = getRefreshToken()
+        if (refreshToken) {
+          try {
+            // Call refresh token endpoint
+            const response = await axios.post(`${BASE_URL}/auth/refresh`, { refreshToken })
+            const { accessToken, refreshToken: newRefreshToken } = response.data.data
 
-          setTokens(accessToken, newRefreshToken)
+            setTokens(accessToken, newRefreshToken)
+            onTokenRefreshed(accessToken)
+            isRefreshing = false
 
-          // Retry original request with new token
-          if (originalRequest.headers) {
-            originalRequest.headers.Authorization = `Bearer ${accessToken}`
+            // Retry original request with new token
+            if (originalRequest.headers) {
+              originalRequest.headers.Authorization = `Bearer ${accessToken}`
+            }
+            return api(originalRequest)
+          } catch (refreshError) {
+            // Refresh failed - logout user
+            isRefreshing = false
+            refreshSubscribers = []
+            clearTokens()
+            router.push('/login')
+            ElMessage.error('登录已过期，请重新登录')
+            return Promise.reject(refreshError)
           }
-          return api(originalRequest)
-        } catch (refreshError) {
-          // Refresh failed - logout user
+        } else {
+          // No refresh token - redirect to login
+          isRefreshing = false
           clearTokens()
           router.push('/login')
-          ElMessage.error('登录已过期，请重新登录')
-          return Promise.reject(refreshError)
         }
       } else {
-        // No refresh token - redirect to login
-        clearTokens()
-        router.push('/login')
+        // Another refresh is in progress, wait for it
+        return new Promise((resolve, reject) => {
+          subscribeTokenRefresh((token: string) => {
+            if (originalRequest.headers) {
+              originalRequest.headers.Authorization = `Bearer ${token}`
+            }
+            resolve(api(originalRequest))
+          })
+          // Timeout fallback
+          setTimeout(() => {
+            reject(new Error('Token refresh timeout'))
+          }, 10000)
+        })
       }
     }
 

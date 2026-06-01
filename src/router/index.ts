@@ -14,14 +14,27 @@ const ParentMonitor = () => import('../views/parent/Monitor.vue')
 const ParentSettings = () => import('../views/parent/Settings.vue')
 
 // Child views
+const ChildAiQa = () => import('../views/child/AiQa.vue')
+const ChildAiChat = () => import('../views/child/ai/AiChat.vue')
+const ChildLearningSummary = () => import('../views/child/ai/LearningSummary.vue')
+
 const ChildDashboard = () => import('../views/child/Dashboard.vue')
+const ChildMyCourses = () => import('../views/child/MyCourses.vue')
 const ChildCourses = () => import('../views/child/Courses.vue')
 const ChildCourseDetail = () => import('../views/child/CourseDetail.vue')
 const ChildLearning = () => import('../views/child/Learning.vue')
 const ChildAssessment = () => import('../views/child/Assessment.vue')
+const ChildAssessmentHistory = () => import('../views/child/AssessmentHistory.vue')
+const ChildPoints = () => import('../views/points/PointsPage.vue')
+const ChildBadges = () => import('../views/badges/BadgesPage.vue')
 
 // Shared
 const Home = () => import('../views/Home.vue')
+
+// Admin views
+const AdminDashboard = () => import('../views/admin/Dashboard.vue')
+const AdminCourseManage = () => import('../views/admin/CourseManage.vue')
+const AdminResourceManage = () => import('../views/admin/ResourceManage.vue')
 
 const routes: RouteRecordRaw[] = [
   {
@@ -49,7 +62,7 @@ const routes: RouteRecordRaw[] = [
     path: '/register/child',
     name: 'RegisterChild',
     component: RegisterChild,
-    meta: { guest: true }
+    meta: { requiresAuth: true, userType: 'parent' }
   },
 
   // Parent routes
@@ -66,8 +79,20 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, userType: 'parent' }
   },
   {
-    path: '/parent/monitor/:childId',
+    path: '/parent/monitor',
     name: 'ParentMonitor',
+    component: ParentMonitor,
+    meta: { requiresAuth: true, userType: 'parent' }
+  },
+  {
+    path: '/parent/monitor/:childId',
+    name: 'ParentMonitorChild',
+    component: ParentMonitor,
+    meta: { requiresAuth: true, userType: 'parent' }
+  },
+  {
+    path: '/parent/report',
+    name: 'ParentReport',
     component: ParentMonitor,
     meta: { requiresAuth: true, userType: 'parent' }
   },
@@ -83,6 +108,12 @@ const routes: RouteRecordRaw[] = [
     path: '/child/dashboard',
     name: 'ChildDashboard',
     component: ChildDashboard,
+    meta: { requiresAuth: true, userType: 'child' }
+  },
+  {
+    path: '/child/my-courses',
+    name: 'ChildMyCourses',
+    component: ChildMyCourses,
     meta: { requiresAuth: true, userType: 'child' }
   },
   {
@@ -104,10 +135,66 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, userType: 'child' }
   },
   {
+    path: '/child/assessments',
+    name: 'ChildAssessmentHistory',
+    component: () => import('../views/child/AssessmentHistory.vue'),
+    meta: { requiresAuth: true, userType: 'child' }
+  },
+  {
     path: '/child/assessment/:chapterId',
     name: 'ChildAssessment',
     component: ChildAssessment,
     meta: { requiresAuth: true, userType: 'child' }
+  },
+  {
+    path: '/child/points',
+    name: 'ChildPoints',
+    component: ChildPoints,
+    meta: { requiresAuth: true, userType: 'child' }
+  },
+  {
+    path: '/child/badges',
+    name: 'ChildBadges',
+    component: ChildBadges,
+    meta: { requiresAuth: true, userType: 'child' }
+  },
+  {
+    path: '/child/ai-qa',
+    name: 'ChildAiQa',
+    component: ChildAiQa,
+    meta: { requiresAuth: true, userType: 'child' }
+  },
+  {
+    path: '/child/ai-chat',
+    name: 'ChildAiChat',
+    component: ChildAiChat,
+    meta: { requiresAuth: true, userType: 'child' }
+  },
+  {
+    path: '/child/learning-summary',
+    name: 'ChildLearningSummary',
+    component: ChildLearningSummary,
+    meta: { requiresAuth: true, userType: 'child' }
+  },
+
+  // Admin routes
+  {
+    path: '/admin/dashboard',
+    name: 'AdminDashboard',
+    component: AdminDashboard,
+    meta: { requiresAuth: true, userType: 'admin' }
+  },
+  {
+    path: '/admin/courses',
+    name: 'AdminCourseManage',
+    component: AdminCourseManage,
+    meta: { requiresAuth: true, userType: 'admin' }
+  },
+  {
+    path: '/admin/resources',
+    name: 'AdminResourceManage',
+    component: AdminResourceManage,
+    meta: { requiresAuth: true, userType: 'admin' }
   }
 ]
 
@@ -130,7 +217,9 @@ router.beforeEach((to, _from, next) => {
   // Guest only routes (login, register)
   if (guest && authStore.isAuthenticated) {
     // If already logged in, redirect to appropriate dashboard
-    if (authStore.isParent) {
+    if (authStore.isAdmin) {
+      return next({ name: 'AdminDashboard' })
+    } else if (authStore.isParent) {
       return next({ name: 'ParentDashboard' })
     } else {
       return next({ name: 'ChildDashboard' })
@@ -146,7 +235,9 @@ router.beforeEach((to, _from, next) => {
     // Role-based access
     if (userType && authStore.userType !== userType) {
       // Redirect to appropriate dashboard based on actual role
-      if (authStore.isParent) {
+      if (authStore.isAdmin) {
+        return next({ name: 'AdminDashboard' })
+      } else if (authStore.isParent) {
         return next({ name: 'ParentDashboard' })
       } else {
         return next({ name: 'ChildDashboard' })

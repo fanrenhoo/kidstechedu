@@ -1,5 +1,5 @@
 // User types
-export type UserType = 'parent' | 'child'
+export type UserType = 'parent' | 'child' | 'admin'
 
 export interface User {
   id: string
@@ -193,6 +193,88 @@ export interface CourseProgress {
   completedChapters: number
   totalChapters: number
   enrollmentDate: string
+}
+
+// Points types
+export interface PointsBalance {
+  childId: string
+  balance: number
+  totalEarned: number
+  totalRedeemed: number
+}
+
+export interface PointsHistory {
+  id: string
+  childId: string
+  type: 'earn' | 'redeem'
+  amount: number
+  description: string
+  createdAt: string
+}
+
+export interface PointsEarn {
+  childId: string
+  amount: number
+  description: string
+}
+
+export interface PointsRedeem {
+  childId: string
+  amount: number
+  description: string
+}
+
+// Badge types
+export interface Badge {
+  id: string
+  type: string
+  name: string
+  description: string
+  iconUrl: string
+  criteria: string
+}
+
+export interface EarnedBadge {
+  id: string
+  childId: string
+  type: string
+  earnedAt: string
+}
+
+// Resource Channel types
+export interface ResourceChannel {
+  id: string
+  platform: 'douyin' | 'bilibili' | 'other'
+  accountId: string
+  category: string
+  status: 'pending' | 'active' | 'synced'
+  lastSyncAt?: string
+  createdAt: string
+}
+
+export interface CourseResource {
+  id: string
+  channelId?: string
+  sourceType: 'builtin' | 'admin' | 'aggregated'
+  sourceId: string
+  title: string
+  description?: string
+  coverUrl?: string
+  contentUrl: string
+  category: 'AI' | '逻辑思维' | '科学' | '历史' | '其它'
+  visibleTo: ('admin' | 'parent' | 'child')[]
+  createdAt: string
+  syncedAt?: string
+}
+
+export interface SyncLog {
+  id: string
+  channelId: string
+  status: 'running' | 'success' | 'failed'
+  syncedCount: number
+  errorMessage?: string
+  startedAt: string
+  completedAt?: string
 }
 
 // API Response wrapper

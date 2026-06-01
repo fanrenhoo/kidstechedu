@@ -10,11 +10,15 @@ export const useAuthStore = defineStore('auth', () => {
   const user = ref<{ userId: string; userType: UserType; profile: Record<string, any> } | null>(null)
   const isLoading = ref(false)
 
+  // Helper to safely get user object
+  const getUser = () => user.value ?? { userId: '', userType: '' as UserType, profile: {} }
+
   const isAuthenticated = computed(() => !!user.value)
-  const isParent = computed(() => user.value?.userType === 'parent')
-  const isChild = computed(() => user.value?.userType === 'child')
-  const userType = computed(() => user.value?.userType)
-  const userId = computed(() => user.value?.userId)
+  const isParent = computed(() => getUser().userType === 'parent')
+  const isChild = computed(() => getUser().userType === 'child')
+  const isAdmin = computed(() => getUser().userType === 'admin')
+  const userType = computed(() => getUser().userType)
+  const userId = computed(() => getUser().userId)
 
   // Initialize from localStorage
   const init = () => {
@@ -28,15 +32,15 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  // Parent login - backend expects { identifier: phone|email, password }
-  const loginParent = async (identifier: string, password: string) => {
+  // Parent login - backend expects { identifier: phone|email, password, userType }
+  const loginParent = async (identifier: string, password: string, userType: 'parent' | 'admin' = 'parent') => {
     isLoading.value = true
     try {
       let userData: { userId: string; userType: UserType; profile: Record<string, any> }
       let tokens: { accessToken: string; refreshToken: string }
 
       if (useMock) {
-        const result = await mockAuth.mockLogin({ identifier, password })
+        const result = await mockAuth.mockLogin({ identifier, password, userType })
         userData = { userId: result.userId, userType: result.userType as UserType, profile: result.profile }
         tokens = { accessToken: result.accessToken, refreshToken: result.refreshToken }
       } else {
@@ -50,7 +54,12 @@ export const useAuthStore = defineStore('auth', () => {
       localStorage.setItem('user', JSON.stringify(userData))
 
       user.value = userData
-      router.push('/parent/dashboard')
+      // Redirect based on selected login type (not backend userType)
+      if (userType === 'admin') {
+        router.push('/admin/dashboard')
+      } else {
+        router.push('/parent/dashboard')
+      }
     } finally {
       isLoading.value = false
     }
@@ -64,7 +73,7 @@ export const useAuthStore = defineStore('auth', () => {
       let tokens: { accessToken: string; refreshToken: string }
 
       if (useMock) {
-        const result = await mockAuth.mockLogin({ identifier: childId, password: credential })
+        const result = await mockAuth.mockLogin({ identifier: childId, password: credential, userType: 'child' })
         userData = { userId: result.userId, userType: result.userType as UserType, profile: result.profile }
         tokens = { accessToken: result.accessToken, refreshToken: result.refreshToken }
       } else {
@@ -151,8 +160,10 @@ export const useAuthStore = defineStore('auth', () => {
         const storedUserId = user.value?.userId
         if (storedUserId) {
           const response = await authApi.getCurrentUser(storedUserId)
-          user.value = response.data
-          localStorage.setItem('user', JSON.stringify(response.data))
+          // Explicitly filter out token fields to prevent mixing with user state
+          const { accessToken, refreshToken, ...safeUserData } = response.data
+          user.value = safeUserData
+          localStorage.setItem('user', JSON.stringify(safeUserData))
         }
       }
     } catch {
@@ -166,6 +177,7 @@ export const useAuthStore = defineStore('auth', () => {
     isAuthenticated,
     isParent,
     isChild,
+    isAdmin,
     userType,
     userId,
     init,

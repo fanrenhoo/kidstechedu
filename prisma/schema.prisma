@@ -1,0 +1,106 @@
+// Prisma Schema for FutureStar Academy (未来星学堂)
+// MVP Version - PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== 资源同步域 ====================
+
+// 资源渠道表
+model ResourceChannel {
+  id          String   @id @default(cuid())
+  platform    String   // 'douyin', 'bilibili', 'xiaohongshu'
+  accountId   String   @map("account_id") // 外部平台账号ID
+  accountName String?  @map("account_name")
+  channelUrl String?  @map("channel_url")
+  status      String   @default("pending") // pending, active, syncing, error
+  lastSyncAt DateTime? @map("last_sync_at")
+  lastError   String?  @map("last_error")
+  syncInterval Int     @default(86400) @map("sync_interval")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // 关系
+  resources CourseResource[]
+  syncLogs  SyncLog[]
+
+  @@unique([platform, accountId])
+  @@map("resource_channels")
+}
+
+// 课程资源表
+model CourseResource {
+  id            String   @id @default(cuid())
+  channelId     String?  @map("channel_id")
+  sourceType    String   @default("builtin") @map("source_type") // builtin, admin, aggregated
+  sourcePlatform String  @map("source_platform") // douyin, bilibili, xiaohongshu
+  sourceId      String   @map("source_id") // 外部平台内容ID
+  title         String
+  description   String?
+  coverUrl      String?  @map("cover_url")
+  contentUrl    String   @map("content_url")
+  embedCode     String?  @map("embed_code")
+  category      String   @default("其它") // AI, 逻辑思维, 科学, 历史, 其它
+  tags          String[] @default([])
+  duration      Int?     // 秒
+  viewCount     Int      @default(0) @map("view_count")
+  likeCount     Int      @default(0) @map("like_count")
+  visibleTo     String[] @default(["admin", "parent", "child"]) @map("visible_to")
+  status        String   @default("active") // active, hidden, deleted
+  publishedAt   DateTime? @map("published_at")
+  syncedAt      DateTime @default(now()) @map("synced_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // 关系
+  channel ResourceChannel? @relation(fields: [channelId], references: [id])
+
+  @@unique([sourcePlatform, sourceId])
+  @@index([category])
+  @@index([channelId])
+  @@map("course_resources")
+}
+
+// 分类映射表
+model CategoryMapping {
+  id              String   @id @default(cuid())
+  platform        String
+  sourceCategory  String   @map("source_category") // 外部平台原始分类
+  targetCategory  String   @map("target_category") // 系统分类
+  keywords        String[] @default([])
+  priority        Int      @default(0)
+  isAutoMatch     Boolean  @default(false) @map("is_auto_match")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@unique([platform, sourceCategory])
+  @@map("category_mappings")
+}
+
+// 同步日志表
+model SyncLog {
+  id           String    @id @default(cuid())
+  channelId    String?   @map("channel_id")
+  syncType     String    @map("sync_type") // full, incremental, manual
+  status       String    // started, success, failed
+  itemsTotal   Int       @default(0) @map("items_total")
+  itemsAdded   Int       @default(0) @map("items_added")
+  itemsUpdated Int       @default(0) @map("items_updated")
+  itemsSkipped Int       @default(0) @map("items_skipped")
+  errorMessage String?   @map("error_message")
+  startedAt    DateTime  @default(now()) @map("started_at")
+  completedAt  DateTime? @map("completed_at")
+
+  // 关系
+  channel ResourceChannel? @relation(fields: [channelId], references: [id])
+
+  @@index([channelId])
+  @@index([createdAt])
+  @@map("sync_logs")
+}

@@ -32,13 +32,57 @@ export const mockChildTokens = {
   refreshToken: 'mock-child-refresh-token'
 }
 
+export const mockAdminTokens = {
+  userId: 'admin-001',
+  userType: 'admin',
+  accessToken: 'mock-admin-access-token',
+  refreshToken: 'mock-admin-refresh-token'
+}
+
+export const mockAdminProfile = {
+  id: 'admin-001',
+  name: '管理员',
+  email: 'admin@kidstech.edu'
+}
+
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
 // Backend: POST /auth/login - returns LoginResponseDto directly (no wrapper)
-// { identifier: phone|email, password }
-export const mockLogin = async (data: { identifier: string; password: string }) => {
+// { identifier: phone|email, password, userType?: 'parent' | 'child' | 'admin' }
+export const mockLogin = async (data: { identifier: string; password: string; userType?: string }) => {
   await delay(500)
-  if (data.identifier === 'parent_test' || data.identifier.startsWith('parent') || data.identifier.includes('@')) {
+
+  // Use explicit userType if provided (from UI selection)
+  if (data.userType === 'admin') {
+    return {
+      ...mockAdminTokens,
+      profile: mockAdminProfile
+    }
+  }
+  if (data.userType === 'parent') {
+    return {
+      ...mockParentTokens,
+      profile: mockParentProfile
+    }
+  }
+  if (data.userType === 'child') {
+    return {
+      ...mockChildTokens,
+      profile: mockChildProfile
+    }
+  }
+
+  // Fallback heuristic if userType not provided
+  // Admin login: identifier is "admin"
+  if (data.identifier === 'admin') {
+    return {
+      ...mockAdminTokens,
+      profile: mockAdminProfile
+    }
+  }
+  // Parent login: identifier is phone (digits only) or email
+  const isParent = data.identifier.includes('@') || /^\d+$/.test(data.identifier)
+  if (isParent) {
     return {
       ...mockParentTokens,
       profile: mockParentProfile
@@ -100,6 +144,9 @@ export const mockGetCurrentUser = async (userId: string) => {
   await delay(300)
   if (userId === 'parent-001') {
     return { userId, userType: 'parent', profile: mockParentProfile }
+  }
+  if (userId === 'admin-001') {
+    return { userId, userType: 'admin', profile: mockAdminProfile }
   }
   return { userId, userType: 'child', profile: mockChildProfile }
 }

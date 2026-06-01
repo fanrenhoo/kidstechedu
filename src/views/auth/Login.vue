@@ -5,7 +5,7 @@ import { ElMessage } from 'element-plus'
 
 const authStore = useAuthStore()
 
-const userType = ref<'parent' | 'child'>('parent')
+const userType = ref<'parent' | 'child' | 'admin'>('parent')
 const identifier = ref('')
 const password = ref('')
 const childId = ref('')
@@ -13,16 +13,16 @@ const credential = ref('')
 const isLoading = ref(false)
 
 const handleLogin = async () => {
-  if (userType.value === 'parent') {
+  if (userType.value === 'parent' || userType.value === 'admin') {
     if (!identifier.value || !password.value) {
-      ElMessage.warning('请输入手机号/邮箱和密码')
+      ElMessage.warning('请输入账号和密码')
       return
     }
     isLoading.value = true
     try {
-      await authStore.loginParent(identifier.value, password.value)
+      await authStore.loginParent(identifier.value, password.value, userType.value as 'parent' | 'admin')
     } catch (error) {
-      ElMessage.error('登录失败，请检查手机号/邮箱和密码')
+      ElMessage.error('登录失败，请检查账号和密码')
     } finally {
       isLoading.value = false
     }
@@ -56,13 +56,14 @@ const handleLogin = async () => {
           <el-radio-group v-model="userType">
             <el-radio value="parent">家长</el-radio>
             <el-radio value="child">儿童</el-radio>
+            <el-radio value="admin">管理员</el-radio>
           </el-radio-group>
         </el-form-item>
 
-        <!-- 家长登录表单 -->
-        <template v-if="userType === 'parent'">
-          <el-form-item label="手机号/邮箱">
-            <el-input v-model="identifier" placeholder="请输入手机号或邮箱" />
+        <!-- 家长/管理员登录表单 -->
+        <template v-if="userType === 'parent' || userType === 'admin'">
+          <el-form-item :label="userType === 'admin' ? '管理员账号' : '手机号/邮箱'">
+            <el-input v-model="identifier" :placeholder="userType === 'admin' ? '请输入管理员账号' : '请输入手机号或邮箱'" />
           </el-form-item>
           <el-form-item label="密码">
             <el-input

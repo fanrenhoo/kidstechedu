@@ -1,0 +1,137 @@
+/* ===== 儿童主题色彩变量 ===== */
+:root {
+  --kid-primary: #FF6B6B;      /* 珊瑚红-活力 */
+  --kid-secondary: #4ECDC4;    /* 薄荷绿-清新 */
+  --kid-accent: #FFE66D;       /* 阳光黄-激励 */
+  --kid-bg: #FFF9F0;           /* 奶油白-温馨 */
+  --kid-text: #2D3748;         /* 深灰-可读 */
+  --kid-success: #48BB78;       /* 草地绿 */
+  --kid-warning: #F6AD55;      /* 橙子橙 */
+  --kid-error: #FC8181;         /* 粉红 */
+}
+
+/* ===== 全局背景 ===== */
+body {
+  background-color: var(--kid-bg);
+  font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+/* ===== 标题字体 ===== */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--kid-text);
+  font-weight: 700;
+}
+
+/* ===== 卡片样式 ===== */
+.el-card.kid-card {
+  border-radius: 20px;
+  border: none;
+  box-shadow: 0 4px 20px rgba(255, 107, 107, 0.15);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.el-card.kid-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 30px rgba(255, 107, 107, 0.25);
+}
+
+/* ===== 按钮样式 ===== */
+.el-button.kid-btn {
+  border-radius: 24px;
+  padding: 12px 28px;
+  font-weight: 600;
+  border: none;
+  background: var(--kid-primary);
+  color: white;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.el-button.kid-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(255, 107, 107, 0.3);
+  background: var(--kid-primary);
+}
+
+/* ===== 进度条样式 ===== */
+.el-progress.kid-progress {
+  --el-progress-border-radius: 10px;
+}
+
+.el-progress-bar__outer {
+  background: linear-gradient(90deg, #FF6B6B, #FFE66D, #4ECDC4, #48BB78);
+}
+
+/* ===== 标签样式 ===== */
+.el-tag.kid-tag {
+  border-radius: 12px;
+  padding: 6px 14px;
+  border: none;
+  background: var(--kid-secondary);
+  color: white;
+}
+
+/* ===== 输入框样式 ===== */
+.el-input__wrapper {
+  border-radius: 16px;
+}
+
+/* ===== 导航栏 ===== */
+.el-header {
+  background: linear-gradient(135deg, var(--kid-primary) 0%, var(--kid-secondary) 100%);
+  color: white;
+}
+
+/* ===== 欢迎文字 ===== */
+.welcome-text {
+  color: var(--kid-primary);
+  font-weight: 700;
+  font-size: 24px;
+}
+
+/* ===== 卡片头部 ===== */
+.card-header {
+  font-size: 18px;
+  font-weight: bold;
+  color: var(--kid-text);
+}
+
+/* ===== 课程卡片 ===== */
+.course-card {
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.course-card .el-card__header {
+  background: linear-gradient(135deg, var(--kid-primary) 0%, var(--kid-accent) 100%);
+  color: white;
+  font-weight: 700;
+}
+
+/* ===== 彩虹进度条 ===== */
+.progress-rainbow {
+  background: linear-gradient(90deg, #FF6B6B, #FFE66D, #4ECDC4, #48BB78);
+  border-radius: 10px;
+}
+
+/* ===== 成就徽章 ===== */
+.badge-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--kid-accent) 0%, var(--kid-secondary) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 24px;
+}
+
+/* ===== 积分显示 ===== */
+.points-display {
+  background: linear-gradient(135deg, var(--kid-accent) 0%, var(--kid-primary) 100%);
+  color: white;
+  border-radius: 24px;
+  padding: 8px 20px;
+  font-weight: 700;
+  display: inline-block;
+}

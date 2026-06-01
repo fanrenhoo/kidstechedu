@@ -1,4 +1,6 @@
 import api from './index'
+import { useMock } from './mockSwitch'
+import * as mockAuth from './mock/auth'
 import type {
   AuthTokens,
   RegisterParentRequest,
@@ -39,25 +41,45 @@ export interface CreateChildResponse {
 }
 
 // Parent login - backend: POST /auth/login/parent
-export const loginParent = (data: ParentLoginRequest) =>
-  api.post<LoginResponse>('/auth/login/parent', data)
+export const loginParent = (data: ParentLoginRequest) => {
+  if (useMock) {
+    return mockAuth.mockLogin(data).then(data => ({ data }))
+  }
+  return api.post<LoginResponse>('/auth/login/parent', data)
+}
 
 // Child login - backend: POST /auth/login/child
-export const loginChild = (data: ChildLoginRequest) =>
-  api.post<LoginResponse>('/auth/login/child', data)
+export const loginChild = (data: ChildLoginRequest) => {
+  if (useMock) {
+    return mockAuth.mockLogin({ identifier: data.childId, password: data.credential }).then(data => ({ data }))
+  }
+  return api.post<LoginResponse>('/auth/login/child', data)
+}
 
 // Register parent - backend returns LoginResponseDto directly
-export const registerParent = (data: RegisterParentRequest) =>
-  api.post<LoginResponse>('/auth/register', data)
+export const registerParent = (data: RegisterParentRequest) => {
+  if (useMock) {
+    return mockAuth.mockRegisterParent(data).then(data => ({ data }))
+  }
+  return api.post<LoginResponse>('/auth/register', data)
+}
 
 // Create child account - backend returns CreateChildResponseDto directly
-export const createChild = (data: CreateChildRequest) =>
-  api.post<CreateChildResponse>('/children', data)
+export const createChild = (data: CreateChildRequest) => {
+  if (useMock) {
+    return mockAuth.mockCreateChild(data).then(data => ({ data }))
+  }
+  return api.post<CreateChildResponse>('/children', data)
+}
 
 // Refresh token - backend returns AuthTokens directly
 export const refreshToken = (refreshToken: string) =>
   api.post<AuthTokens>('/auth/refresh', { refreshToken })
 
 // Get current user - backend returns LoginResponseDto directly
-export const getCurrentUser = (userId: string) =>
-  api.get<LoginResponse>(`/auth/${userId}`)
+export const getCurrentUser = (userId: string) => {
+  if (useMock) {
+    return mockAuth.mockGetCurrentUser(userId).then(data => ({ data }))
+  }
+  return api.get<LoginResponse>(`/auth/${userId}`)
+}
